@@ -2,6 +2,7 @@
 from functools import lru_cache
 
 from pydantic import field_validator
+from pydantic import field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -15,10 +16,10 @@ class Settings(BaseSettings):
     frontend_url: str = "http://localhost:3000"
 
     # Database
-    database_url: str = "postgresql+psycopg://postgres:postgres@localhost:5432/recruit"
+    database_url: str = "postgresql://neondb_owner:npg_wzRWSty7LJK2@ep-quiet-tree-azy7a59l-pooler.c-3.ap-southeast-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require"
 
     # Auth
-    jwt_secret: str = "change-me"
+    jwt_secret: str = "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"
     jwt_algorithm: str = "HS256"
     access_token_expire_minutes: int = 60
     cookie_name: str = "access_token"
@@ -57,6 +58,20 @@ class Settings(BaseSettings):
         elif v.startswith("postgresql://"):
             v = v.replace("postgresql://", "postgresql+psycopg://", 1)
         return v
+
+    @model_validator(mode="after")
+    def _check_deployment_safety(self):
+        self.cookie_samesite = self.cookie_samesite.lower()
+        if self.cookie_samesite not in ("lax", "strict", "none"):
+            raise ValueError("COOKIE_SAMESITE must be lax, strict or none")
+        if self.cookie_samesite == "none" and not self.cookie_secure:
+            raise ValueError("COOKIE_SAMESITE=none requires COOKIE_SECURE=true (browsers drop the cookie otherwise)")
+        if self.is_production:
+            if self.jwt_secret in ("", "change-me") or len(self.jwt_secret) < 32:
+                raise ValueError("Set a strong JWT_SECRET (32+ chars) in production")
+            if not self.cookie_secure:
+                raise ValueError("COOKIE_SECURE must be true in production")
+        return self
 
     @property
     def is_production(self) -> bool:

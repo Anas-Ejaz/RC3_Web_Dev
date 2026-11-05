@@ -1,6 +1,23 @@
+# Default: the API uses your Neon DATABASE_URL from .env.
+#   docker compose up --build
+# Optional local Postgres with pgvector (set DATABASE_URL=postgresql+psycopg://postgres:postgres@db:5432/recruit):
+#   docker compose --profile local-db up --build
 services:
+  api:
+    build: .
+    env_file: .env
+    environment:
+      PORT: "8000"
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+        required: false   # needs Compose 2.20+; ignored when the local-db profile is off
+
   db:
     image: pgvector/pgvector:pg16
+    profiles: ["local-db"]
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
@@ -12,23 +29,8 @@ services:
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres -d recruit"]
       interval: 5s
-      timeout: 5s
+      timeout: 3s
       retries: 10
-
-  api:
-    build: .
-    env_file: .env
-    environment:
-      # Inside the compose network the DB host is "db", not localhost.
-      DATABASE_URL: postgresql+psycopg://postgres:postgres@db:5432/recruit
-    ports:
-      - "8000:8000"
-    depends_on:
-      db:
-        condition: service_healthy
-    volumes:
-      - fastembed_cache:/app/.fastembed_cache
 
 volumes:
   pgdata:
-  fastembed_cache:
