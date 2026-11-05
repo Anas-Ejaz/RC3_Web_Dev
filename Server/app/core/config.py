@@ -1,0 +1,74 @@
+"""Application settings, loaded only from environment variables / .env."""
+from functools import lru_cache
+
+from pydantic import field_validator
+from pydantic_settings import BaseSettings, SettingsConfigDict
+
+
+class Settings(BaseSettings):
+    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
+
+    # App
+    environment: str = "development"
+    log_level: str = "INFO"
+    api_prefix: str = "/api/v1"
+    frontend_url: str = "http://localhost:3000"
+
+    # Database
+    database_url: str = "postgresql+psycopg://postgres:postgres@localhost:5432/recruit"
+
+    # Auth
+    jwt_secret: str = "change-me"
+    jwt_algorithm: str = "HS256"
+    access_token_expire_minutes: int = 60
+    cookie_name: str = "access_token"
+    cookie_secure: bool = False
+    cookie_samesite: str = "lax"
+    login_max_attempts: int = 5
+    login_window_seconds: int = 300
+
+    # Groq
+    groq_api_key: str = ""
+    groq_model_extract: str = "llama-3.3-70b-versatile"
+    groq_model_explain: str = "llama-3.3-70b-versatile"
+    groq_timeout_seconds: int = 30
+
+    # Embeddings
+    embedding_provider: str = "fastembed"
+    embedding_model: str = "BAAI/bge-small-en-v1.5"
+    embedding_dim: int = 384
+
+    # Uploads / retention
+    max_upload_mb: int = 5
+    talent_pool_retention_days: int = 365
+
+    @field_validator("frontend_url")
+    @classmethod
+    def _strip_trailing_slash(cls, v: str) -> str:
+        return v.rstrip("/")
+
+    @field_validator("database_url")
+    @classmethod
+    def _force_psycopg_driver(cls, v: str) -> str:
+        """Hosted providers often hand out postgres:// or postgresql:// URLs; normalize to psycopg v3."""
+        if v.startswith("postgres://"):
+            v = v.replace("postgres://", "postgresql+psycopg://", 1)
+        elif v.startswith("postgresql://"):
+            v = v.replace("postgresql://", "postgresql+psycopg://", 1)
+        return v
+
+    @property
+    def is_production(self) -> bool:
+        return self.environment.lower() == "production"
+
+    @property
+    def max_upload_bytes(self) -> int:
+        return self.max_upload_mb * 1024 * 1024
+
+
+@lru_cache
+def get_settings() -> Settings:
+    return Settings()
+
+
+settings = get_settings()
