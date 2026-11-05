@@ -1,6 +1,6 @@
 "use client";
 
-import { get, useFormContext, type Path } from "react-hook-form";
+import { get, useFormContext, type FieldError, type Path } from "react-hook-form";
 
 import { Field } from "@/components/shared/form-field";
 import { Input } from "@/components/ui/input";
@@ -21,7 +21,7 @@ export function ResumeFormInput({ name, label, multiline, numeric, type = "text"
     register,
     formState: { errors },
   } = useFormContext<ResumeCorrectionValues>();
-  const error = get(errors, name)?.message as string | undefined;
+  const error = (get(errors, name) as FieldError | undefined)?.message;
   const id = name.replace(/\./g, "-");
   const registered = register(name, numeric ? { valueAsNumber: true } : undefined);
 

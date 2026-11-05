@@ -51,8 +51,8 @@ export interface Job {
   department: string;
   location: string;
   type: JobType;
-  salary_min: number;
-  salary_max: number;
+  salary_min: number | null; // CHANGED: was number
+  salary_max: number | null; // CHANGED: was number
   currency: string;
   description: string;
   required_skills: SkillReq[];
