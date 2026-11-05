@@ -5,7 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import settings
 from app.core.errors import register_exception_handlers
 from app.core.logging import configure_logging
-from app.routers import applications, auth, candidates, health, jobs
+from app.routers import analytics, applications, auth, candidates, fairness, health, interviews, jobs, talent
 
 configure_logging()
 
@@ -20,6 +20,7 @@ app = FastAPI(
 # CORS restricted to the frontend origin only; credentials needed for the HttpOnly cookie.
 app.add_middleware(
     CORSMiddleware,
+    expose_headers=["X-Search-Mode", "X-Search-Fallback-Reason"],
     allow_origins=[settings.frontend_url],
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
@@ -35,5 +36,9 @@ api_router.include_router(auth.router)
 api_router.include_router(jobs.router)
 api_router.include_router(candidates.router)
 api_router.include_router(applications.router)
+api_router.include_router(interviews.router)
+api_router.include_router(analytics.router)
+api_router.include_router(talent.router)
+api_router.include_router(fairness.router)
 
 app.include_router(api_router)

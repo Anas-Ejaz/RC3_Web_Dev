@@ -1,5 +1,5 @@
-"""Candidate-only endpoints: profile and resume. Every route requires the candidate role."""
-from fastapi import APIRouter, Depends, File, UploadFile
+"""Candidate-only endpoints: profile, resume, recommendations, talent-pool consent. Every route requires the candidate role."""
+from fastapi import APIRouter, Depends, File, Query, UploadFile
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
@@ -9,7 +9,9 @@ from app.core.errors import AppError
 from app.models.candidate import Resume
 from app.models.user import User
 from app.schemas.candidate import ParsedResumeOut, ProfileIn, ProfileOut, ResumeCorrectionIn
-from app.services import profiles, resumes
+from app.schemas.talent import ConsentIn, ConsentOut, RecommendationOut
+from app.services import profiles, recommendations, resumes
+from app.services import talent_pool as pool_svc
 
 router = APIRouter(prefix="/candidate", tags=["candidate"])
 
@@ -51,3 +53,21 @@ def correct_resume(body: ResumeCorrectionIn, user: User = Depends(require_candid
 def reparse_resume(user: User = Depends(require_candidate), db: Session = Depends(get_db)):
     """Extra endpoint (not in contract): retry AI parsing after a failure such as a Groq timeout."""
     return resumes.reparse(db, _own_resume(db, user))
+
+
+@router.get("/recommendations", response_model=list[RecommendationOut])
+def get_recommendations(limit: int = Query(10, ge=1, le=20), user: User = Depends(require_candidate), db: Session = Depends(get_db)):
+    """Open jobs that fit the candidate's parsed resume. Empty list if there is no parsed resume yet."""
+    return recommendations.recommend(db, user, limit)
+
+
+@router.get("/talent-pool-consent", response_model=ConsentOut)
+def get_consent(user: User = Depends(require_candidate), db: Session = Depends(get_db)):
+    """Extra endpoint (not in contract): whether past applications may be suggested for other jobs."""
+    return pool_svc.get_consent(db, user.id)
+
+
+@router.put("/talent-pool-consent", response_model=ConsentOut)
+def put_consent(body: ConsentIn, user: User = Depends(require_candidate), db: Session = Depends(get_db)):
+    """Extra endpoint (not in contract): opt in or out. Opting out removes the candidate from every pool immediately."""
+    return pool_svc.set_consent(db, user.id, body.consent)

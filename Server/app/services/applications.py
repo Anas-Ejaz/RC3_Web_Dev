@@ -11,6 +11,7 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
+from app.services.anonymize import strip_for_scoring
 from app.core.errors import AppError
 from app.models.application import Application, ApplicationNote, AuditLog
 from app.models.candidate import Resume
@@ -98,9 +99,23 @@ def get_owned_application(db: Session, application_id: int, user: User) -> Appli
     return app
 
 
+def compute_scores(job: Job, resume: dict, text: str) -> dict:
+    """THE scoring path (assessments, recommendations, talent pool and the fairness test all use it).
+
+    Personal attributes are stripped first, then scores are computed in code from embeddings and evidence.
+    """
+    clean, clean_text = strip_for_scoring(resume, text)
+    return matching.compute(_job_dict(job), clean, clean_text)
+
+
+def has_skill_evidence(computed: dict) -> bool:
+    """True if at least one job skill has confirmed or weak evidence (used to keep recommendations relevant)."""
+    return any(r["state"] != "no_evidence_found" for r in computed["skill_results"])
+
+
 def run_assessment(app: Application, job: Job) -> None:
     """Score in code, then ask the LLM to explain the computed result. A recruiter override is preserved."""
-    computed = matching.compute(_job_dict(job), app.resume_data, app.resume_text)
+    computed = compute_scores(job, app.resume_data, app.resume_text)
     computed.update(matching.explain(job.title, computed))
     computed["generated_at"] = datetime.now(timezone.utc).isoformat()
     app.assessment = computed

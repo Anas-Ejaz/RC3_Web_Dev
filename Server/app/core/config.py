@@ -40,7 +40,8 @@ class Settings(BaseSettings):
 
     # Uploads / retention
     max_upload_mb: int = 5
-    talent_pool_retention_days: int = 365
+    talent_pool_retention_days: int = 180  # was 365; the spec and test_talent assume 180
+    duplicate_similarity_threshold: float = 0.92  # DUPLICATE_SIMILARITY_THRESHOLD
 
     @field_validator("frontend_url")
     @classmethod

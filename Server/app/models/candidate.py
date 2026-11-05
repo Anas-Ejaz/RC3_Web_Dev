@@ -1,7 +1,7 @@
 """Candidate profile and parsed resume (one current resume per candidate)."""
 from datetime import datetime
 
-from sqlalchemy import JSON, DateTime, ForeignKey, String, Text, func
+from sqlalchemy import JSON, Boolean, DateTime, ForeignKey, String, Text, false, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import Base
@@ -17,6 +17,9 @@ class CandidateProfile(Base):
     location: Mapped[str] = mapped_column(String(200), default="")
     interests: Mapped[list] = mapped_column(JSON, default=list)
     summary: Mapped[str] = mapped_column(Text, default="")
+    # Talent-pool permission: reuse of this candidate's past application data for other jobs needs opt-in.
+    talent_pool_consent: Mapped[bool] = mapped_column(Boolean, default=False, server_default=false())
+    talent_pool_consent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
 
