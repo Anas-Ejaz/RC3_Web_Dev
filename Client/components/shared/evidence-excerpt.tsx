@@ -1,61 +1,64 @@
 "use client";
 
-import { ChevronDown } from "lucide-react";
 import { useState } from "react";
-import { cn, escapeRegExp } from "@/lib/utils";
+
+import { cn } from "@/lib/utils";
 
 interface EvidenceExcerptProps {
-  excerpt?: string;
-  highlight?: string[];
+  excerpt: string;
+  /** Term or terms to mark inside the excerpt. */
+  highlight?: string | string[];
+  /** Clamp long excerpts and let the reader expand them. */
   collapsible?: boolean;
-  defaultOpen?: boolean;
   className?: string;
 }
 
-function Highlighted({ text, terms }: { text: string; terms: string[] }) {
-  const clean = terms.filter(Boolean);
-  if (!clean.length) return <>{text}</>;
-  const re = new RegExp(`(${clean.map(escapeRegExp).join("|")})`, "gi");
-  return (
-    <>
-      {text.split(re).map((part, i) =>
-        clean.some((t) => t.toLowerCase() === part.toLowerCase()) ? (
-          <mark key={i} className="rounded bg-lime-soft px-0.5 text-forest-900">
-            {part}
-          </mark>
-        ) : (
-          <span key={i}>{part}</span>
-        ),
-      )}
-    </>
+const COLLAPSE_AFTER = 160;
+
+function escapeRegExp(value: string) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function renderHighlighted(text: string, highlight?: string | string[]) {
+  const terms = (Array.isArray(highlight) ? highlight : highlight ? [highlight] : [])
+    .map((t) => t.trim())
+    .filter(Boolean);
+  if (terms.length === 0) return text;
+
+  const pattern = new RegExp(`(${terms.map(escapeRegExp).join("|")})`, "gi");
+  const lowered = terms.map((t) => t.toLowerCase());
+
+  return text.split(pattern).map((part, i) =>
+    lowered.includes(part.toLowerCase()) ? (
+      <mark key={i} className="rounded bg-lime-200 px-0.5 text-forest-950">
+        {part}
+      </mark>
+    ) : (
+      <span key={i}>{part}</span>
+    ),
   );
 }
 
-export function EvidenceExcerpt({ excerpt, highlight = [], collapsible = false, defaultOpen = false, className }: EvidenceExcerptProps) {
-  const [open, setOpen] = useState(defaultOpen || !collapsible);
-
-  if (!excerpt) {
-    return <p className={cn("text-sm italic text-muted-foreground", className)}>No resume excerpt available.</p>;
-  }
+export function EvidenceExcerpt({ excerpt, highlight, collapsible = false, className }: EvidenceExcerptProps) {
+  const [open, setOpen] = useState(false);
+  const canCollapse = collapsible && excerpt.length > COLLAPSE_AFTER;
+  const clamped = canCollapse && !open;
 
   return (
-    <div className={className}>
-      {collapsible && (
+    <blockquote className={cn("rounded-xl border-l-4 border-forest-700/40 bg-cream-100 px-4 py-3", className)}>
+      <p className={cn("whitespace-pre-line text-sm leading-relaxed text-forest-950", clamped && "line-clamp-3")}>
+        {renderHighlighted(excerpt, highlight)}
+      </p>
+      {canCollapse && (
         <button
           type="button"
-          onClick={() => setOpen((o) => !o)}
+          className="mt-2 rounded text-xs font-medium text-forest-800 underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest-700"
           aria-expanded={open}
-          className="mb-1 inline-flex items-center gap-1 rounded text-xs font-medium text-muted-foreground hover:text-foreground"
+          onClick={() => setOpen((v) => !v)}
         >
-          <ChevronDown className={cn("h-3.5 w-3.5 transition-transform", open && "rotate-180")} aria-hidden />
-          {open ? "Hide resume excerpt" : "Show resume excerpt"}
+          {open ? "Show less" : "Show more"}
         </button>
       )}
-      {open && (
-        <blockquote className="rounded-xl border-l-4 border-lime-dark bg-cream-200 px-4 py-2.5 text-sm leading-relaxed text-foreground/90">
-          <Highlighted text={excerpt} terms={highlight} />
-        </blockquote>
-      )}
-    </div>
+    </blockquote>
   );
 }

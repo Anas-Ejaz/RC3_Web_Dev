@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
-import { RECOMMENDATIONS_KEY } from "@/hooks/use-applications";
 import { api, isApiError, uploadResume } from "@/lib/api";
 import { toast, toastError } from "@/lib/toast";
 import type { ProfileValues } from "@/lib/validators";
@@ -12,10 +11,16 @@ import type { ParsedResume } from "@/types/api";
 export const PROFILE_KEY = ["candidate", "profile"] as const;
 export const RESUME_KEY = ["candidate", "resume"] as const;
 
+// Must match RECOMMENDATIONS_KEY in hooks/use-applications.ts.
+const RECOMMENDATIONS_PREFIX = ["candidate", "recommendations"] as const;
+
 type ResumeCorrectionsInput = Parameters<typeof api.candidate.saveResumeCorrections>[0];
 
 export function useProfile() {
-  return useQuery({ queryKey: PROFILE_KEY, queryFn: () => api.candidate.getProfile() });
+  return useQuery({
+    queryKey: PROFILE_KEY,
+    queryFn: () => api.candidate.getProfile(),
+  });
 }
 
 export function useUpdateProfile() {
@@ -55,7 +60,7 @@ export function useUploadResume() {
     },
     onSuccess: (resume) => {
       qc.setQueryData(RESUME_KEY, resume);
-      qc.invalidateQueries({ queryKey: RECOMMENDATIONS_KEY });
+      qc.invalidateQueries({ queryKey: RECOMMENDATIONS_PREFIX });
     },
   });
   return { ...mutation, progress };
@@ -67,8 +72,9 @@ export function useSaveResume() {
     mutationFn: (values: ResumeCorrectionsInput) => api.candidate.saveResumeCorrections(values),
     onSuccess: (saved) => {
       qc.setQueryData(RESUME_KEY, saved);
-      qc.invalidateQueries({ queryKey: RECOMMENDATIONS_KEY });
+      qc.invalidateQueries({ queryKey: RECOMMENDATIONS_PREFIX });
       toast.success("Resume corrections saved");
     },
+    onError: (e) => toastError(e),
   });
 }

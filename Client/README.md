@@ -1,36 +1,56 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Recruitment & Talent Intelligence Platform (frontend)
 
-## Getting Started
+Next.js (App Router, TypeScript), Tailwind, shadcn/ui, TanStack Query, React Hook Form + Zod, Recharts, sonner.
+AI output is advisory: every screen says so and every hiring decision is made by a person.
 
-First, run the development server:
+## Setup
 
 ```bash
+npm install
+cp .env.example .env.local
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open http://localhost:3000.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Environment variables
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+| Variable | Purpose |
+| --- | --- |
+| `NEXT_PUBLIC_API_URL` | Backend origin (e.g. `http://localhost:8000`). `/api/*` is proxied to it by a Next.js rewrite, so the HttpOnly auth cookie stays same-site. No trailing slash, no `/api/v1`. |
+| `NEXT_PUBLIC_USE_MOCKS` | `true` serves contract-shaped data from MSW for development. `false` calls the real API. Must be `false` in production. |
 
-## Learn More
+## Demo accounts (mock mode)
 
-To learn more about Next.js, take a look at the following resources:
+- Recruiter: `recruiter@demo.com` / `password`
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Demo scenario
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+1. Recruiter posts a Backend Developer job (Python, Django, PostgreSQL, Docker).
+2. Three candidates apply with resumes.
+3. Recruiter opens ranked applicants and reads the explainable scores and missing-evidence flags.
+4. Recruiter shortlists one, generates interview questions, and schedules an interview.
+5. The dashboard updates.
 
-## Deploy on Vercel
+## Scripts
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+- `npm run dev` start the dev server
+- `npm run build` production build
+- `npm run lint` lint
+- `npx tsc --noEmit` type check
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Deploy to Vercel
+
+1. Push the repo to GitHub.
+2. In Vercel choose **Add New, Project**, import the repo. The Next.js preset is detected automatically.
+3. Under **Environment Variables** add:
+   - `NEXT_PUBLIC_API_URL` = your deployed backend origin (HTTPS)
+   - `NEXT_PUBLIC_USE_MOCKS` = `false`
+4. Deploy. Rewrites are read at build time, so **redeploy** after changing `NEXT_PUBLIC_API_URL`.
+5. On the backend, allow the Vercel domain in CORS and set the auth cookie to `Secure` and `SameSite=Lax`. Because requests go through the `/api/*` rewrite, the browser sees a same-origin request.
+
+## Troubleshooting
+
+- **Logged out on every refresh:** the cookie is not being set. Check `NEXT_PUBLIC_API_URL`, and that the backend cookie is `Secure` on HTTPS.
+- **404 on API calls:** `NEXT_PUBLIC_API_URL` includes `/api/v1`. Remove it.
+- **Mock data in production:** `NEXT_PUBLIC_USE_MOCKS` is not `false`. Change it and redeploy.
